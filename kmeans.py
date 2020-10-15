@@ -10,8 +10,8 @@ class kMeans:
 
     def __init__(self, image_data = None): 
         #???
-    def doKmeans(init, n_clusters, n_init, dataSet): 
-        k_means = KMeans(init, n_clusters, n_init)
+   def doKmeans(clusters, initNum, dataSet): 
+        k_means = KMeans(init = "k-means++", n_clusters = clusters, n_init = initNum)
         #fit the data to our k_means model
         k_means.fit(dataSet)   
         return k_means
