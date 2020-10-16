@@ -9,6 +9,4 @@ And then I tried to make it look better and more useful and pretty by making it 
 which is the kmeans.py class. however i suck at python and dont know the syntax 
 for classes so it is not done! Im still working on it :)
 
-10/16/20 alec: okay so since the ImPCA class is huge i'll add some documentation in a text file later
-for any one who wants to mess around with it. also i just added a couple more functions to it that
-do some cool stuff, and some that do some useless stuff. anyways.
+10/16/20 alec: okay so since the ImPCA class is huge i'll add some documentation in a text file later for any one who wants to mess around with it. also i just added a couple more functions to it that do some cool stuff, and some that do some useless stuff. anyway
