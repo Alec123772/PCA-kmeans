@@ -420,25 +420,8 @@ class ImPCA:
         plt.ylabel('Percentage of Variation Accounted For')
         plt.show()
 
-    def showImageIdx(self,i,title=None):
-        '''shows an image from the input data given it's index, i'''
-        img = self.raw_images[i] # get image from the data
-        # reshape the image (correctly)
-        if self.RGB == True:
-            img = img.reshape(self.imy,self.imx,3)
-        else:
-            img = img.reshape(self.imy,self.imx)
-        img = img/torch.max(img) # put the image between zero and one
-        img = np.array(img) # convert to np array
-        plt.imshow(img) # plot the image
-        if title: # title the image?
-            plt.title(title)
-        plt.xlabel('index = %d' % i) # label it with the index
-        plt.show() # show the image
-        pass
-
     def showImage(self,img=None, n=None, title=None, subtitle=None):
-        '''the end-all be-all function to show an image from this class. img argument
+        '''the end-all be-all function to show a SINGLE image from this class. img argument
         can be set to an integer, in which case it will show the data point at the index;
         a list of integers, in which case it will show the images at all indexes in the list;
         a torch tensor of an image, in which case it will show the image in the array; a set
@@ -467,6 +450,7 @@ class ImPCA:
                 plt.xlabel('index = '+str(img)) # subtitle it with the index
 
             plt.show()
+            return None # stop right there
 
         elif type(img) == list: # list of image indecies are given
             # img is a list of indecies of images to display
@@ -477,14 +461,16 @@ class ImPCA:
                 except:
                     t=None
                 self.showImage(img=index,title=t) # call this class to show the image
-            pass
+            return None # stop right there
         elif type(img) == type(None) and type(n) == int: # show n random images
             for _ in range(n):
                 i = random.randint(0,self.n_samp-1)
                 self.showImage(img=i)
+            return None # stop right there
         elif type(img) != torch.tensor: # then idk wtf to do
             raise TypeError('%s is not an acceptable type for img' % type(img))
 
+        print(type(img))
         imgsize = img.size() # get the tensor's shape
 
         if len(imgsize)==1 and imgsize[0] == self.n_vars: # single datapoint!!!
@@ -505,6 +491,7 @@ class ImPCA:
                 plt.xlabel(subtitle)
 
             plt.show()
+            return None # stop right there
 
         elif len(imgsize)==2 and imgsize[1] == self.n_vars: # a set of datapoints is given
             for i in range(imgsize[0]):
@@ -520,6 +507,7 @@ class ImPCA:
                 # call this class to show the image data
                 self.showImage(imgdata, title=t, subtitle = st)
             pass
+            return None # stop right there
         elif imgsize[0] == self.imy and imgsize[1] == self.imx: # an image is given
             imgarr = img/torch.max(img) # make image data between zero and one
             imgarr = np.array(imgarr)
@@ -535,6 +523,7 @@ class ImPCA:
                 plt.xlabel(subtitle)
 
             plt.show()
+            return None # stop right there
         elif imgsize[1] == self.imy and imgsize[2] == self.imx: # a set of images are given
             for i in range(imgsize[0]):
                 imgarr = img[i] # get the image data
@@ -548,7 +537,38 @@ class ImPCA:
                     st = 'index = '+str(i) # otherwise just use the index
                 # call this class to display image
                 self.showImage(img=imgarr,title=t,subtite=st)
-            pass
+            return None # stop right there
+        pass
+
+    def showManyImages(self,image_data,titles=None):
+        '''makes a plot to show ALL the images in image_data at once. the image
+        data argument must be tensors with shape (_, imy, imx[, 3]) and it must
+        be propperly scaled (all values between zero and one)'''
+        nimgs = len(image_data) # number of images to show
+        # make sure that the titles list and number of images match
+        if titles and len(titles) != nimgs:
+            raise AttributeError('The length of the titles list and number of images must match')
+        # figure out rows / columns
+        rows = int(nimgs**0.5) # number of columns of images to display
+        columns = nimgs/rows # number of rows to display
+        if columns % 1 != 0: # make rows an integer such that rows*columns >= ndim
+            columns = int(columns+1)
+        else:
+            columns = int(columns)
+        # setup the plot stuffs
+        axes = []
+        fig = plt.figure()
+        # main loop
+        for i in range(nimgs):
+            # get the image
+            img = image_data[i]
+            # now show the image
+            axes.append(fig.add_subplot(rows,columns,i+1)) # add the subplot to the axes list
+            if titles:
+                axes[-1].set_title(titles[i]) # title the subplot with the dimension number
+            plt.imshow(img) # show the image on the subplot
+        plt.show()
+        pass
 
     def showImageFromData(self,datapoint,title=None, subtitle=None):
         '''converts a datapoint back to the image that it's representing and displays that image'''
@@ -592,21 +612,96 @@ class ImPCA:
         else:
             return comps[:ndim]
 
-    def visCompression(self,nimgs=1,ndim=2):
+    def visCompression(self,nimgs=1,ndim=10, mindim=0):
         '''a way to visualize how well images are preserved under the basis of
         the eigenvectors.'''
         if type(ndim) == int: # if ndim is an integer, format it as a list
             ndim = [ndim]
         # main loop
-        for _ in range(nimgs):
-            i = random.randint(0,self.n_samp-1) # pick a random image
-            self.showImageIdx(i,'Original Image') # show the image
-            datapoint = self.data[i] # scaled datapoint corresponding to image
-            comps = self.getCompsData(datapoint,max(ndim)) # get components of the datapoint
-            recimg = torch.zeros(datapoint.size())
-            for i in range(max(ndim)):
-                ###
-                recimg = recimg + comps[i]*self.eigvecs[i] # add scaled basis to the recreation
+        for _ in range(nimgs): # do this once for each image requested
+            ri = random.randint(0,self.n_samp-1) # pick a random image
+            # make the image data tensor
+            if self.RGB: # figure out the size of each image
+                imgsize = (self.imy,self.imx,3)
+            else:
+                imgsize = (self.imy,self.imx)
+            image_data = torch.zeros(len(ndim)+1,*imgsize) # image data tensor
+            img = self.raw_images[ri] # first image (original)
+            img = img-torch.min(img) # make the min zero
+            img = img/torch.max(img) # make the max one
+            image_data[0] = img # first image (original)
+            nextidx = 1 # next image index
+            titles = ['Original'] # titles list
+            # get the data ready
+            comps = self.comps[ri,mindim:] # get components of the datapoint after mindim
+            recimg = torch.zeros(self.data[ri].size()) # image recreation (all zeros)
+            for i in range(max(ndim)): # loop through 0 to max(ndim)
+                recimg = recimg + comps[i]*self.eigvecs[mindim+i] # add scaled basis to the recreation
                 if i+1 in ndim: # if we're on one of the requested dimensions
-                    self.showImageFromData(recimg,'Recreated Image','# of Dimensions = '+str(i+1))
-            pass
+                    img = self.stat.unScale(recimg) # unscale the recreated image
+                    img = img-torch.min(img) # make the min zero
+                    img = img/torch.max(img) # make the max one
+                    img = img.reshape(imgsize) # reshape the image data
+                    image_data[nextidx] = img # add the image
+                    nextidx += 1 # increment the index
+                    titles.append('Dim'+str(mindim)+'--Dim'+str(mindim+i+1)) # add the title
+            self.showManyImages(image_data,titles)
+        pass
+
+    def visualizePCA(self,ndim=10,mindim=0):
+        '''displays the principal components as though they are images to visualize
+        what each one might correspond to. shows components mindim through mindim+ndim'''
+        # setup the image data
+        if self.RGB:
+            image_data = torch.zeros(ndim,self.imy,self.imx,3)
+        else:
+            image_data = torch.zeros(ndim,self.imy,self.imx)
+        titles = [] # list of titles
+        # main loop!
+        for i in range(ndim):
+            # start by getting the image
+            img = self.eigvecs[i+mindim] # image data from the i+mindim th eigenvector
+            img = self.stat.unScale(img) # un-scale the data as though it's an image
+            # need to force image data between zero and one
+            img = img-torch.min(img)
+            img = img/torch.max(img)
+            # now resize image data (depending on if it's rgb or not)
+            if self.RGB:
+                img = img.reshape(self.imy,self.imx,3)
+            else:
+                img = img.reshape(self.imy,self.imx)
+            # and put the image and title in the tensor/list
+            image_data[i] = img # add the image to the tensor
+            titles.append('Dim'+str(i+mindim)) # add the title to the list
+        self.showManyImages(image_data,titles)
+        pass
+
+    def visualizeComponents(self,nimgs=1,ncomps=100,mincomp=0):
+        '''this visualizes nimgs of random images, then plots below them their component values
+        by component as a bar graph. pretty cool, but i aint found a practical use for it yet.'''
+        # setup the plot
+        rows = 2 # 2 rows
+        columns = nimgs # 1 column
+        axes = []
+        fig = plt.figure()
+        for imgn in range(nimgs):
+            i = random.randint(0,self.n_samp) # pick a random index
+            # get the image data
+            img = self.raw_images[i] # get the image
+            img = img/torch.max(img) # scale the image right
+            # get the component data
+            ys = self.comps[i,mincomp:ncomps]
+            xs = list(range(mincomp+1,ncomps+1))
+            # plot the image!
+            axes.append(fig.add_subplot(rows,columns,1+imgn))
+            axes[-1].set_title('Image')
+            plt.imshow(img)
+            # plot the components
+            axes.append(fig.add_subplot(rows,columns,1+imgn+nimgs))
+            axes[-1].set_xlabel('Components by #')
+            axes[-1].set_ylabel('Component Values')
+            plt.bar(xs,ys)
+        # show that shit
+        plt.show()
+
+###########################################
