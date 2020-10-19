@@ -1,12 +1,16 @@
-hello! this is a readme
-hi 
-hi!!
+~~~ PCA-kMeans-v0/readme.txt ~~~
 
-10/15/20 sathvika: Ok so i uploaded prelim_kmeans which is just super cluttered kmeans 
-code along with loading some sample data and running some sample pca 
-(just to see if the kmeans code actually works) ( and it does woo). 
-And then I tried to make it look better and more useful and pretty by making it into a class, 
-which is the kmeans.py class. however i suck at python and dont know the syntax 
-for classes so it is not done! Im still working on it :)
+This is the our first attempt at using the PCA & kmeans methods to cluster our data. It contains 6 python files, five of which contain their own class. The basic function of each file and it's dependencies are outlined below.
 
-10/16/20 alec: okay so since the ImPCA class is huge i'll add some documentation in a text file later for any one who wants to mess around with it. also i just added a couple more functions to it that do some cool stuff, and some that do some useless stuff. anyway
+~~~ Stat.py ~~~
+This class basically handles the re-scaling of data so that it can be better interpreted by other classes.
+~~~ Timer.py ~~~
+This class is just a basic timer for other classes to help the user see what calculations are taking how long.
+~~~ ImPCA.py ~~~
+This class does the PCA analysis on image data, and it relies on Stat and Timer classes.
+~~~ kMeans.p y~~~
+This class does the kmeans clustering of the new data produced by the ImPCA class. It only relies on the Stat class.
+~~~ ImageHelper.py ~~~
+Since, more often than not, one must alter the raw image data before feeding it through this process, the ImageHelper class takes in the raw image data and the indecies of the elements in each cluster from the kMeans class, and outputs the clusters to a specified folder.
+~~~ main.py ~~~
+This is the main file, running this file applies the PCA-kMeans to the data you point it to. Variables can be altered under the #VARIABLES comment at the top of the file.
